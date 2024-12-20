@@ -1,3 +1,1 @@
-# fast
-
-ХУР + ДАН implementation service
+# QPay-TV
