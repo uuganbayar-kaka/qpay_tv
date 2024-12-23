@@ -12,9 +12,9 @@ from django.core.cache import cache
 
 # "/v2/invoice"
 
-def bl_qpay_cancel_invoice(request_id, invoice_id, brc):
+def qpay_cancel_invoice(request_id, invoice_id, brc):
     try:
-        bearer_token = __bl_qpay_get_token(brc)
+        bearer_token = qpay_get_token(brc)
  
         headers = {
             'Authorization': "Bearer" + bearer_token['access_token'],
@@ -38,10 +38,11 @@ def bl_qpay_cancel_invoice(request_id, invoice_id, brc):
     except Exception as e:
         print('Qpay invoice cancel failed.\nerror: {}'.format(e), extra={'brc': brc, 'Request-Id': request_id}, exc_info=True)
         raise Exception("API Response Problem [%s]." % (str(e)))
- 
-def bl_qpay_check_invoice(invoice_id, brc):
+
+
+def qpay_check_invoice(invoice_id, brc):
     try:
-        bearer_token = __bl_qpay_get_token(brc)
+        bearer_token = qpay_get_token(brc)
  
         headers = {
             'Authorization': "Bearer" + bearer_token['access_token'],
@@ -66,7 +67,7 @@ def bl_qpay_check_invoice(invoice_id, brc):
         raise Exception("API Response Problem [%s]." % (str(e)))
  
 
-def __bl_qpay_get_token(brc: str):
+def qpay_get_token(brc: str):
     try:
         data = settings.QPAY_USERNAME + ':' + settings.QPAY_PASSWORD
         auth_b64 = base64.b64encode(data.encode('utf-8')).decode()
@@ -85,13 +86,13 @@ def __bl_qpay_get_token(brc: str):
         raise Exception("API Response Problem [%s]." % (str(e)))
 
 
-def bl_qpay_create_invoice(request_id, invoice_id, amount, pos_terminal):
+def qpay_create_invoice(request_id, invoice_id, amount, pos_terminal):
     bank_list = []
     bank_corp_code = None
     company = pos_terminal.company
     response = None
  
-    bearer_token = __bl_qpay_get_token(pos_terminal.company_brc)
+    bearer_token = qpay_get_token(pos_terminal.company_brc)
  
     payment_method = InventoryPOSTransactionPaymentMethod.objects.filter(key=POS_TRANSACTION_PAYMENT_QPAY).first()
     if not payment_method:
