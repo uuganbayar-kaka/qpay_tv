@@ -6,3 +6,4 @@ urllib3==1.26.15
 mongoengine
 gunicorn
 psycopg2-binary
+django-pymemcache

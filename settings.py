@@ -72,16 +72,16 @@ TEMPLATES = [
 ]
 
 # Cache
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'django_redis.cache.RedisCache',
-#         'LOCATION': 'redis://127.0.0.1:6379/5',
-#         'OPTIONS': {
-#             # 'CLIENT_CLASS': 'redis_cache.client.DefaultClient',
-#             "REDIS_CLIENT_KWARGS": {"health_check_interval": 30}
-#         }
-#     }
-# }
+CACHES = {
+     'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
+        'LOCATION': '127.0.0.1:11211',
+    },
+    # "memcache": {
+    #     'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+    #     'LOCATION': '127.0.0.1:11211',
+    # },
+}
 
 WSGI_APPLICATION = 'wsgi.application'
 

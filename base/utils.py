@@ -7,11 +7,11 @@ from django.core.cache import cache
 
 
 # "/v2/merchant/company"
- 
+
 # "/v2/merchant/person"
- 
+
 # "/v2/invoice"
- 
+
 def bl_qpay_cancel_invoice(request_id, invoice_id, brc):
     try:
         bearer_token = __bl_qpay_get_token(brc)
