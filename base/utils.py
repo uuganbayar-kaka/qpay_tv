@@ -6,6 +6,8 @@ import datetime
 from django.conf import settings
 from base.const import CONTENT_TYPE_JSON
 from django.core.cache import cache
+from django.core.cache import caches
+
 
 
 # "/v2/merchant/company"
@@ -14,7 +16,7 @@ from django.core.cache import cache
 
 # "/v2/invoice"
 
-def qpay_get_token():
+def qpay_get_token(invoice_no):
     terminal_id = "91909029"
     
     try:
@@ -24,79 +26,74 @@ def qpay_get_token():
         print("QPay access token: {}-{}-{}".format(settings.QPAY_TOKEN_URL, auth_b64, terminal_id))
 
         response = requests.post(
-            settings.QPAY_TOKEN_URL, headers={'Authorization': 'Basic ' + auth_b64}, 
+            settings.QPAY_TOKEN_URL,
+            headers={'Authorization': 'Basic ' + auth_b64}, 
             json={'terminal_id': terminal_id}
         )
-        print("response : ", response)
+        print("qpay_get_token response : ", response)
  
         response.raise_for_status()
         resp = response.json()
-        # cache.set('QPAY_ACCESS_TOKEN_TERMINAL_ID_' + terminal_id, value=resp, timeout=resp['expires_in'])
-        print("resp : ", resp)
-        token = resp.get("access_token", '')
+        print("expires_in : " , resp['expires_in'])
+        
+        cache = caches['default']
+        cache.set(invoice_no, resp)
+
+        token = resp.get("access_token")
         return token
     except Exception as e:
-        print('QPay token авахад алдаа гарлаа. {}'.format(e), exc_info=True)
+        print('QPay token авахад алдаа гарлаа. ', str(e))
         raise Exception("API Response Problem [%s]." % (str(e)))
 
 
-def qpay_cancel_invoice(request_id, invoice_id, brc):
-    try:
-        bearer_token = qpay_get_token(brc)
- 
-        headers = {
-            'Authorization': "Bearer" + bearer_token['access_token'],
-            "Content-Type": CONTENT_TYPE_JSON
+def create_invoice_simple(data):
+    amount = data.get('amount')
+    if amount <= 0:
+        raise 
+    url = settings.QPAY_URL + "/v2/invoice"
+        
+    invoice_no = "%s" % (datetime.datetime.now().strftime("%Y%m%d%H%M%S").zfill(10))
+    print("invoice_no : ", invoice_no)
+
+    bearer_token = qpay_get_token(invoice_no)
+
+    token = cache.get(invoice_no)
+    print("token : \n%s\n%s" % (token, bearer_token))
+
+    payload = json.dumps({
+        "invoice_code": "TEST_INVOICE",
+        "sender_invoice_no": invoice_no,
+        "invoice_receiver_code": "91909029",
+        "invoice_description": "test",
+        "amount": amount,
+        "callback_url": "https://bd5492c3ee85.ngrok.io/payments?payment_id=91909029"
+    })
+    print("payload : ", payload)
+
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer %s' % bearer_token
+    }
+
+    response = requests.request(
+        "POST",
+        url,
+        headers=headers,
+        data=payload
+    )
+
+    if response.status_code == requests.codes.OK:
+        ret = response.json()
+        response_data = {
+            "invoice_id": ret.get("invoice_id"),
+            "qr_image": ret.get("qr_image"),
+            "qr_short_url": ret.get("qPay_shortUrl"),
+            "qr_text": ret.get("qr_text"),
         }
- 
-        qpay_invoice_data = cache.get('QPAY_{}'.format(invoice_id))
-        print("qpay_invoice_data from cache: {}".format(qpay_invoice_data), extra={'Request-Id': request_id})
-        if not qpay_invoice_data:
-            raise Exception("Нэхэмжлэх Олдсонгүй")
- 
-        response = requests.delete(
-            settings.QPAY_URL + '/v2/invoice/{}'.format(qpay_invoice_data['id']), headers=headers)
-        resp_json = response.json()
-        print("QPay invoice cancel response: {}".format(resp_json), extra={'brc': brc, 'Request-Id': request_id})
-        if response.status_code == requests.codes.OK:
-            cache.delete("QPAY_{}".format(invoice_id))
-            return
-
-        response.raise_for_status()
-    except Exception as e:
-        print('Qpay invoice cancel failed.\nerror: {}'.format(e), extra={'brc': brc, 'Request-Id': request_id}, exc_info=True)
-        raise Exception("API Response Problem [%s]." % (str(e)))
+    return response_data
 
 
-def qpay_check_invoice(invoice_id, brc):
-    try:
-        bearer_token = qpay_get_token(brc)
- 
-        headers = {
-            'Authorization': "Bearer" + bearer_token['access_token'],
-            "Content-Type": CONTENT_TYPE_JSON
-        }
- 
-        qpay_invoice_data = cache.get('QPAY_{}'.format(invoice_id))
-        print("qpay_invoice_data from cache: {}".format(qpay_invoice_data))
- 
-        body = {'invoice_id': qpay_invoice_data['id']}
- 
-        response = requests.post(
-            settings.QPAY_URL + '/v2/payment/check', headers=headers, json=body)
-        resp_json = response.json()
-        print("QPay invoice check response: {}".format(resp_json), extra={'brc': brc})
-        if response.status_code == requests.codes.OK:
-            cache.set('QPAY_{}'.format(invoice_id), value=resp_json, timeout=5 * 60)
-            return
-        response.raise_for_status()
-    except Exception as e:
-        print('Qpay invoice check failed.\nerror: {}'.format(e), extra={'brc': brc}, exc_info=True)
-        raise Exception("API Response Problem [%s]." % (str(e)))
- 
-
-
-def qpay_create_invoice(request_id, invoice_id, amount, pos_terminal):
+def create_invoice(request_id, invoice_id, amount, pos_terminal):
     bank_list = []
     bank_corp_code = None
     company = pos_terminal.company
@@ -146,7 +143,11 @@ def qpay_create_invoice(request_id, invoice_id, amount, pos_terminal):
             'bank_accounts': bank_list,
         }
         print("QPay create invoice request data url: {}".format(settings.QPAY_URL), extra={'headers': headers, 'body': body, 'Request-Id': request_id, 'brc': pos_terminal.company_brc})
-        response = requests.post( settings.QPAY_URL + '/v2/invoice', headers=headers, json=body)
+        response = requests.post(
+            settings.QPAY_URL + '/v2/invoice',
+            headers=headers,
+            json=body
+        )
         if response.status_code == requests.codes.OK:
             resp_json = response.json()
             resp_json.pop('urls')
@@ -160,28 +161,61 @@ def qpay_create_invoice(request_id, invoice_id, amount, pos_terminal):
         raise Exception("QPay exception ", str(e))
 
 
+def qpay_check_invoice(invoice_id, brc):
+    try:
+        bearer_token = qpay_get_token(brc)
 
-def create_invoice_test(token):
-    url = "https://sandbox-quickqr.qpay.mn/v2/invoice"
+        headers = {
+            'Authorization': "Bearer" + bearer_token,
+            "Content-Type": CONTENT_TYPE_JSON
+        }
 
-    invoice_no = "%s" % (datetime.datetime.now().strftime("%Y%m%d%H%M%S").zfill(10))
-    print("invoice_no : ", invoice_no)
+        qpay_invoice_data = cache.get('QPAY_{}'.format(invoice_id))
+        print("qpay_invoice_data from cache: {}".format(qpay_invoice_data))
 
-    payload = json.dumps({
-        "invoice_code": "TEST_INVOICE",
-        "sender_invoice_no": invoice_no,
-        "invoice_receiver_code": "91909029",
-        "invoice_description": "test",
-        "amount": 100,
-        "callback_url": "https://bd5492c3ee85.ngrok.io/payments?payment_id=91909029"
-    })
-    print("payload : ", payload)
+        body = {'invoice_id': qpay_invoice_data['id']}
 
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer %s' % token
-    }
+        response = requests.post(
+            settings.QPAY_URL + '/v2/payment/check',
+            headers=headers,
+            json=body
+        )
+        resp_json = response.json()
+        print("QPay invoice check response: {}".format(resp_json), extra={'brc': brc})
+        if response.status_code == requests.codes.OK:
+            cache.set('QPAY_{}'.format(invoice_id), value=resp_json, timeout=5 * 60)
+            return
+        response.raise_for_status()
+    except Exception as e:
+        print('Qpay invoice check failed.\nerror: {}'.format(e), extra={'brc': brc}, exc_info=True)
+        raise Exception("API Response Problem [%s]." % (str(e)))
 
-    response = requests.request("POST", url, headers=headers, data=payload)
-    result = response.json()
-    return result
+
+def qpay_cancel_invoice(request_id, invoice_id, brc):
+    try:
+        bearer_token = qpay_get_token(brc)
+ 
+        headers = {
+            'Authorization': "Bearer" + bearer_token['access_token'],
+            "Content-Type": CONTENT_TYPE_JSON
+        }
+ 
+        qpay_invoice_data = cache.get('QPAY_{}'.format(invoice_id))
+        print("qpay_invoice_data from cache: {}".format(qpay_invoice_data), extra={'Request-Id': request_id})
+        if not qpay_invoice_data:
+            raise Exception("Нэхэмжлэх Олдсонгүй")
+ 
+        response = requests.delete(
+            settings.QPAY_URL + '/v2/invoice/{}'.format(qpay_invoice_data['id']),
+            headers=headers
+        )
+        resp_json = response.json()
+        print("QPay invoice cancel response: {}".format(resp_json), extra={'brc': brc, 'Request-Id': request_id})
+        if response.status_code == requests.codes.OK:
+            cache.delete("QPAY_{}".format(invoice_id))
+            return
+
+        response.raise_for_status()
+    except Exception as e:
+        print('Qpay invoice cancel failed.\nerror: {}'.format(e), extra={'brc': brc, 'Request-Id': request_id}, exc_info=True)
+        raise Exception("API Response Problem [%s]." % (str(e)))

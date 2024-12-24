@@ -13,8 +13,13 @@ from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.http import HttpResponse
 from django.http import HttpResponseForbidden
-from base.utils import qpay_get_token
-from base.utils import create_invoice_test
+
+
+from base import serializers
+from base import exceptions
+
+from base.utils import create_invoice_simple
+from base.utils import create_invoice
 
 
 def ping(request):
@@ -26,14 +31,115 @@ def ping(request):
     })
 
 
-class GetInvioceView(APIView):
+class GetinvoiceSimpleView(APIView):
     
-    def get(self, request, format=None):
-        user_id = request.GET.get("user_id")
-        print("request : ", request)
-        
-        token = qpay_get_token()
-        response = create_invoice_test(token)
-        print("response : ", response)
-        
-        return JsonResponse(response)
+    def post(self, request, format=None):
+        serializer = serializers.GetInvoiceSimpleSerializer(data=request.data)
+        if serializer.is_valid():
+            data = request.data
+            print("data : ", data)
+            response = create_invoice_simple(data)
+            return Response(response)
+        raise exceptions.RequestDataValidationException(
+            detail_data=serializer.errors,
+            log_data={"request_data": request.data, "errors": serializer.errors}
+        )
+
+class GetinvoiceView(APIView):
+    
+    def post(self, request, format=None):
+        serializer = serializers.GetInvoiceSerializer(data=request.data)
+        if serializer.is_valid():
+            data = request.data
+            print("data : ", data)
+            response = create_invoice(data)
+            return Response(response)
+        raise exceptions.RequestDataValidationException(
+            detail_data=serializer.errors,
+            log_data={"request_data": request.data, "errors": serializer.errors}
+        )
+
+
+class CancelInvoiceView(APIView):
+    
+    def post(self, request, format=None):
+        serializer = serializers.GetInvoiceSerializer(data=request.data)
+        if serializer.is_valid():
+            data = request.data
+            print("data : ", data)
+            response = create_invoice_test(data)
+            return Response(response)
+        raise exceptions.RequestDataValidationException(
+            detail_data=serializer.errors,
+            log_data={"request_data": request.data, "errors": serializer.errors}
+        )
+
+class GetPaymentView(APIView):
+    
+    def post(self, request, format=None):
+        serializer = serializers.GetInvoiceSerializer(data=request.data)
+        if serializer.is_valid():
+            data = request.data
+            print("data : ", data)
+            response = create_invoice_test(data)
+            return Response(response)
+        raise exceptions.RequestDataValidationException(
+            detail_data=serializer.errors,
+            log_data={"request_data": request.data, "errors": serializer.errors}
+        )
+
+class CheckPaymentView(APIView):
+    
+    def post(self, request, format=None):
+        serializer = serializers.GetInvoiceSerializer(data=request.data)
+        if serializer.is_valid():
+            data = request.data
+            print("data : ", data)
+            response = create_invoice_test(data)
+            return Response(response)
+        raise exceptions.RequestDataValidationException(
+            detail_data=serializer.errors,
+            log_data={"request_data": request.data, "errors": serializer.errors}
+        )
+
+class CancelPaymentView(APIView):
+    
+    def post(self, request, format=None):
+        serializer = serializers.GetInvoiceSerializer(data=request.data)
+        if serializer.is_valid():
+            data = request.data
+            print("data : ", data)
+            response = create_invoice_test(data)
+            return Response(response)
+        raise exceptions.RequestDataValidationException(
+            detail_data=serializer.errors,
+            log_data={"request_data": request.data, "errors": serializer.errors}
+        )
+
+class RefundPaymentView(APIView):
+    
+    def post(self, request, format=None):
+        serializer = serializers.GetInvoiceSerializer(data=request.data)
+        if serializer.is_valid():
+            data = request.data
+            print("data : ", data)
+            response = create_invoice_test(data)
+            return Response(response)
+        raise exceptions.RequestDataValidationException(
+            detail_data=serializer.errors,
+            log_data={"request_data": request.data, "errors": serializer.errors}
+        )
+
+class PaymentListView(APIView):
+    
+    def post(self, request, format=None):
+        serializer = serializers.GetInvoiceSerializer(data=request.data)
+        if serializer.is_valid():
+            data = request.data
+            print("data : ", data)
+            response = create_invoice_test(data)
+            return Response(response)
+        raise exceptions.RequestDataValidationException(
+            detail_data=serializer.errors,
+            log_data={"request_data": request.data, "errors": serializer.errors}
+        )

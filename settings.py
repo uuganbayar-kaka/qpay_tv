@@ -73,14 +73,9 @@ TEMPLATES = [
 
 # Cache
 CACHES = {
-     'default': {
-        'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
-        'LOCATION': '127.0.0.1:11211',
-    },
-    # "memcache": {
-    #     'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-    #     'LOCATION': '127.0.0.1:11211',
-    # },
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
 }
 
 WSGI_APPLICATION = 'wsgi.application'
@@ -135,7 +130,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-QPAY_URL = os.getenv("QPAY_URL", "https://sandbox-quickqr.qpay.mn")
-QPAY_TOKEN_URL = os.getenv("QPAY_URL", "https://sandbox-quickqr.qpay.mn/v2/auth/token")
-QPAY_USERNAME = os.getenv("QPAY_USERNAME", "TEST_VENDOR_MERCHANT")
+QPAY_URL = os.getenv("QPAY_URL", "https://merchant-sandbox.qpay.mn")
+QPAY_TOKEN_URL = os.getenv("QPAY_TOKEN_URL", "https://merchant-sandbox.qpay.mn/v2/auth/token")
+
+QPAY_USERNAME = os.getenv("QPAY_USERNAME", "TEST_MERCHANT")
 QPAY_PASSWORD = os.getenv("QPAY_PASSWORD", "123456")

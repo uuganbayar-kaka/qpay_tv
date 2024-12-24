@@ -7,3 +7,4 @@ mongoengine
 gunicorn
 psycopg2-binary
 django-pymemcache
+python-memcached
