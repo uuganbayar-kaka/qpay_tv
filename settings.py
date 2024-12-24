@@ -136,5 +136,6 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 QPAY_URL = os.getenv("QPAY_URL", "https://sandbox-quickqr.qpay.mn")
+QPAY_TOKEN_URL = os.getenv("QPAY_URL", "https://sandbox-quickqr.qpay.mn/v2/auth/token")
 QPAY_USERNAME = os.getenv("QPAY_USERNAME", "TEST_VENDOR_MERCHANT")
 QPAY_PASSWORD = os.getenv("QPAY_PASSWORD", "123456")

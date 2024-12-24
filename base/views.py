@@ -13,6 +13,8 @@ from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.http import HttpResponse
 from django.http import HttpResponseForbidden
+from base.utils import qpay_get_token
+from base.utils import create_invoice_test
 
 
 def ping(request):
@@ -23,20 +25,6 @@ def ping(request):
         'build_date': os.environ.get('BUILD_DATE', '')
     })
 
-def get_token():
-    url = "https://merchant-sandbox.qpay.mn/v2/auth/token"
-
-    payload = ""
-    headers = {
-        'Authorization': 'Basic'
-    }
-
-    response = requests.request("POST", url, headers=headers, data=payload)
-
-    print("response.text : ", response.text)
-    ret = response.json()
-    return ret
-
 
 class GetInvioceView(APIView):
     
@@ -44,7 +32,8 @@ class GetInvioceView(APIView):
         user_id = request.GET.get("user_id")
         print("request : ", request)
         
-        token = get_token()
-        print("token : ", token)
+        token = qpay_get_token()
+        response = create_invoice_test(token)
+        print("response : ", response)
         
-        return redirect(token)
+        return JsonResponse(response)
